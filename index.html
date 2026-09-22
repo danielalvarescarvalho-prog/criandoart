@@ -2640,6 +2640,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     window.gtag('event', eventName, Object.assign({
       page_location: window.location.href,
+      page_path: window.location.pathname,
       page_title: document.title,
       source: 'site_criandoart'
     }, params || {}));
@@ -2647,6 +2648,64 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   function cleanText(value) {
     return (value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function getLocalDateTimeParts() {
+    const now = new Date();
+
+    const pad = function (n) {
+      return String(n).padStart(2, '0');
+    };
+
+    const date = [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate())
+    ].join('-');
+
+    const time = [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join(':');
+
+    return {
+      click_date_local: date,
+      click_time_local: time,
+      click_datetime_local: date + ' ' + time,
+      click_timestamp_ms: String(now.getTime())
+    };
+  }
+
+  function getWhatsappMessage(link) {
+    try {
+      const url = new URL(link.href, window.location.href);
+
+      if (
+        url.hostname.includes('wa.me') ||
+        url.hostname.includes('whatsapp.com')
+      ) {
+        return cleanText(url.searchParams.get('text') || '');
+      }
+
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function getWhatsappPhone(link) {
+    try {
+      const url = new URL(link.href, window.location.href);
+
+      if (url.hostname.includes('wa.me')) {
+        return url.pathname.replace(/\D/g, '');
+      }
+
+      return cleanText(url.searchParams.get('phone') || '').replace(/\D/g, '');
+    } catch (e) {
+      return '';
+    }
   }
 
   const serviceOpenEvents = {
@@ -2742,11 +2801,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
 
     const service = getService(link);
+
     if (service && serviceWhatsappEvents[service]) {
       return serviceWhatsappEvents[service];
     }
 
     const footerCol = link.closest('.footer-col');
+
     if (footerCol && cleanText(link.textContent).includes('+55')) {
       return 'whatsapp_footer_phone_click';
     }
@@ -2754,7 +2815,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     return 'whatsapp_other_click';
   }
 
-  /* 1. WhatsApp: evento principal + nome específico da origem */
+  /* ========================================================
+     1. WHATSAPP
+     Evento principal + evento nominal + dados detalhados
+     ======================================================== */
   document.addEventListener('click', function (event) {
     const link = event.target.closest(
       'a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"]'
@@ -2764,99 +2828,150 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     const service = getService(link) || 'GERAL';
     const specificEvent = getWhatsappSpecificEvent(link);
+    const dateTime = getLocalDateTimeParts();
+    const message = getWhatsappMessage(link);
+    const phone = getWhatsappPhone(link);
 
-    const params = {
+    const params = Object.assign({
       service: service,
-      click_location: specificEvent.replace(/^whatsapp_/, '').replace(/_click$/, ''),
-      link_text: cleanText(link.innerText || link.getAttribute('aria-label') || 'WhatsApp'),
-      link_url: link.href
-    };
+      click_location: specificEvent
+        .replace(/^whatsapp_/, '')
+        .replace(/_click$/, ''),
+      click_event_name: specificEvent,
+      link_text: cleanText(
+        link.innerText ||
+        link.getAttribute('aria-label') ||
+        'WhatsApp'
+      ),
+      link_url: link.href,
+      whatsapp_message: message,
+      whatsapp_phone: phone
+    }, dateTime);
 
-    sendGA4Event('whatsapp_click', Object.assign({
-      click_event_name: specificEvent
-    }, params));
-
+    sendGA4Event('whatsapp_click', params);
     sendGA4Event(specificEvent, params);
   }, true);
 
-  /* 2. Abertura dos serviços: geral + evento nominal */
+  /* ========================================================
+     2. ABERTURA DOS SERVIÇOS
+     Evento geral + evento nominal + data/hora
+     ======================================================== */
   document.querySelectorAll('[data-open-service]').forEach(function (button) {
     button.addEventListener('click', function () {
-      const service = button.getAttribute('data-open-service') || 'NAO_INFORMADO';
-      const specificEvent = serviceOpenEvents[service] || 'service_other_open';
+      const service =
+        button.getAttribute('data-open-service') || 'NAO_INFORMADO';
 
-      sendGA4Event('service_detail_open_ga4', {
-        service: service,
-        click_event_name: specificEvent
-      });
+      const specificEvent =
+        serviceOpenEvents[service] || 'service_other_open';
 
-      sendGA4Event(specificEvent, {
-        service: service
-      });
+      const dateTime = getLocalDateTimeParts();
+
+      sendGA4Event(
+        'service_detail_open_ga4',
+        Object.assign({
+          service: service,
+          click_event_name: specificEvent
+        }, dateTime)
+      );
+
+      sendGA4Event(
+        specificEvent,
+        Object.assign({
+          service: service
+        }, dateTime)
+      );
     });
   });
 
-  /* 3. Formulário */
+  /* ========================================================
+     3. FORMULÁRIO
+     Mantém lead_form_submit como conversão
+     ======================================================== */
   const leadForm = document.getElementById('leadForm');
 
   if (leadForm) {
     leadForm.addEventListener('submit', function () {
       const serviceField = document.getElementById('leadService');
+      const dateTime = getLocalDateTimeParts();
 
-      sendGA4Event('lead_form_submit', {
-        service: serviceField ? serviceField.value : 'NAO_INFORMADO',
-        form_id: 'leadForm'
-      });
+      sendGA4Event(
+        'lead_form_submit',
+        Object.assign({
+          service:
+            serviceField ? serviceField.value : 'NAO_INFORMADO',
+          form_id: 'leadForm'
+        }, dateTime)
+      );
     });
   }
 
-  /* 4. Navegação interna */
+  /* ========================================================
+     4. NAVEGAÇÃO INTERNA
+     ======================================================== */
   document.addEventListener('click', function (event) {
     const link = event.target.closest('a[href^="#"]');
     if (!link) return;
 
     const href = link.getAttribute('href');
     const eventName = navEvents[href];
-
     if (!eventName) return;
 
-    sendGA4Event(eventName, {
-      link_text: cleanText(link.textContent),
-      target_section: href.replace('#', '')
-    });
+    sendGA4Event(
+      eventName,
+      Object.assign({
+        link_text: cleanText(link.textContent),
+        target_section: href.replace('#', '')
+      }, getLocalDateTimeParts())
+    );
   }, true);
 
-  /* 5. Redes sociais */
+  /* ========================================================
+     5. REDES SOCIAIS
+     ======================================================== */
   document.addEventListener('click', function (event) {
     const link = event.target.closest('.social-link');
     if (!link) return;
 
     const href = link.href || '';
+    const dateTime = getLocalDateTimeParts();
 
     if (href.includes('instagram.com')) {
-      sendGA4Event('instagram_click', {
-        link_text: cleanText(link.textContent),
-        link_url: href
-      });
+      sendGA4Event(
+        'instagram_click',
+        Object.assign({
+          link_text: cleanText(link.textContent),
+          link_url: href
+        }, dateTime)
+      );
     }
 
     if (href.includes('linkedin.com')) {
-      sendGA4Event('linkedin_click', {
-        link_text: cleanText(link.textContent),
-        link_url: href
-      });
+      sendGA4Event(
+        'linkedin_click',
+        Object.assign({
+          link_text: cleanText(link.textContent),
+          link_url: href
+        }, dateTime)
+      );
     }
   }, true);
 
-  /* 6. CTA Conhecer soluções no Hero */
+  /* ========================================================
+     6. CTA CONHECER SOLUÇÕES
+     ======================================================== */
   document.addEventListener('click', function (event) {
-    const link = event.target.closest('.hero .btn-secondary[href="#solucoes"]');
+    const link =
+      event.target.closest('.hero .btn-secondary[href="#solucoes"]');
+
     if (!link) return;
 
-    sendGA4Event('hero_solucoes_click', {
-      link_text: cleanText(link.textContent),
-      target_section: 'solucoes'
-    });
+    sendGA4Event(
+      'hero_solucoes_click',
+      Object.assign({
+        link_text: cleanText(link.textContent),
+        target_section: 'solucoes'
+      }, getLocalDateTimeParts())
+    );
   }, true);
 
 })();
