@@ -2620,4 +2620,89 @@ document.addEventListener('DOMContentLoaded',()=>{
   <span class="floating-wa-label">Falar com a CriandoArt</span>
 </a>
 
+
+<!-- =========================================================
+     CRIANDOART - TRACKING GA4
+     Propriedade: G-Z81JH6QBL5
+     Eventos:
+     - whatsapp_click
+     - lead_form_submit
+     - service_detail_open_ga4
+     ========================================================= -->
+<script id="criandoart-ga4-events">
+(function () {
+  'use strict';
+
+  function sendGA4Event(eventName, params) {
+    if (typeof window.gtag !== 'function') {
+      return;
+    }
+
+    window.gtag('event', eventName, Object.assign({
+      page_location: window.location.href,
+      page_title: document.title
+    }, params || {}));
+  }
+
+  /* ---------------------------------------------------------
+     1. CLIQUES NO WHATSAPP
+     Captura qualquer link wa.me ou whatsapp.com do site.
+     --------------------------------------------------------- */
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest(
+      'a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"]'
+    );
+
+    if (!link) return;
+
+    var service =
+      link.getAttribute('data-service') ||
+      link.closest('[data-service-detail]')?.getAttribute('data-service-detail') ||
+      'GERAL';
+
+    var linkText = (link.innerText || link.getAttribute('aria-label') || 'WhatsApp')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    sendGA4Event('whatsapp_click', {
+      service: service,
+      link_text: linkText,
+      link_url: link.href,
+      source: 'site_criandoart'
+    });
+  }, true);
+
+  /* ---------------------------------------------------------
+     2. ENVIO DO FORMULÁRIO DE CONTATO
+     Não interfere no sendLeadToWhatsapp existente.
+     --------------------------------------------------------- */
+  var leadForm = document.getElementById('leadForm');
+
+  if (leadForm) {
+    leadForm.addEventListener('submit', function () {
+      var serviceField = document.getElementById('leadService');
+
+      sendGA4Event('lead_form_submit', {
+        service: serviceField ? serviceField.value : 'NAO_INFORMADO',
+        source: 'site_criandoart'
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------
+     3. INTERESSE EM SERVIÇOS
+     Registra abertura dos cards/modal.
+     --------------------------------------------------------- */
+  document.querySelectorAll('[data-open-service]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      sendGA4Event('service_detail_open_ga4', {
+        service: button.getAttribute('data-open-service') || 'NAO_INFORMADO',
+        source: 'site_criandoart'
+      });
+    });
+  });
+
+})();
+</script>
+
 </body></html>
