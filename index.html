@@ -2636,73 +2636,228 @@ document.addEventListener('DOMContentLoaded',()=>{
   'use strict';
 
   function sendGA4Event(eventName, params) {
-    if (typeof window.gtag !== 'function') {
-      return;
-    }
+    if (typeof window.gtag !== 'function') return;
 
     window.gtag('event', eventName, Object.assign({
       page_location: window.location.href,
-      page_title: document.title
+      page_title: document.title,
+      source: 'site_criandoart'
     }, params || {}));
   }
 
-  /* ---------------------------------------------------------
-     1. CLIQUES NO WHATSAPP
-     Captura qualquer link wa.me ou whatsapp.com do site.
-     --------------------------------------------------------- */
+  function cleanText(value) {
+    return (value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  const serviceOpenEvents = {
+    TRAFEGO_PAGO: 'service_trafego_pago_open',
+    SOCIAL_MEDIA: 'service_social_media_open',
+    LP_CONVERTE: 'service_lp_converte_open',
+    RASTREIO_PRO: 'service_rastreio_pro_open',
+    GOOGLE_PRESENCA: 'service_google_presenca_open',
+    GOOGLE_LOCAL_PRO: 'service_google_local_pro_open',
+    CRESCER_360: 'service_crescer_360_open',
+    DIRECAO_ESTRATEGICA: 'service_direcao_estrategica_open',
+    PLANO_CRESCIMENTO: 'service_plano_crescimento_open'
+  };
+
+  const serviceWhatsappEvents = {
+    TRAFEGO_PAGO: 'whatsapp_trafego_pago_click',
+    SOCIAL_MEDIA: 'whatsapp_social_media_click',
+    LP_CONVERTE: 'whatsapp_lp_converte_click',
+    RASTREIO_PRO: 'whatsapp_rastreio_pro_click',
+    GOOGLE_PRESENCA: 'whatsapp_google_presenca_click',
+    GOOGLE_LOCAL_PRO: 'whatsapp_google_local_pro_click',
+    CRESCER_360: 'whatsapp_crescer_360_click',
+    DIRECAO_ESTRATEGICA: 'whatsapp_direcao_estrategica_click',
+    PLANO_CRESCIMENTO: 'whatsapp_plano_crescimento_click',
+    ANALISE_GRATUITA: 'whatsapp_analise_gratuita_click'
+  };
+
+  const navEvents = {
+    '#solucoes': 'nav_solucoes_click',
+    '#processo': 'nav_processo_click',
+    '#clientes': 'nav_clientes_click',
+    '#cases': 'nav_cases_click',
+    '#faq': 'nav_faq_click',
+    '#contato': 'nav_contato_click'
+  };
+
+  function getCaseEvent(link) {
+    const card = link.closest('.case-card');
+    if (!card) return null;
+
+    const titleEl = card.querySelector('.case-topline span');
+    const title = cleanText(titleEl ? titleEl.textContent : '').toLowerCase();
+
+    if (title.includes('ativa')) return 'whatsapp_case_ativa_click';
+    if (title.includes('denver')) return 'whatsapp_case_denver_click';
+    if (title.includes('campax')) return 'whatsapp_case_campax_click';
+
+    return 'whatsapp_case_click';
+  }
+
+  function getService(link) {
+    const direct = link.getAttribute('data-service');
+    if (direct) return direct;
+
+    const detail = link.closest('[data-service-detail]');
+    return detail ? detail.getAttribute('data-service-detail') : null;
+  }
+
+  function getWhatsappSpecificEvent(link) {
+    if (link.classList.contains('nav-cta')) {
+      return 'whatsapp_header_click';
+    }
+
+    if (link.classList.contains('mobile-menu-cta')) {
+      return 'whatsapp_menu_mobile_click';
+    }
+
+    if (link.classList.contains('floating-wa')) {
+      return 'whatsapp_floating_click';
+    }
+
+    if (link.classList.contains('mobile-wa')) {
+      return 'whatsapp_mobile_fixed_click';
+    }
+
+    const caseEvent = getCaseEvent(link);
+    if (caseEvent) return caseEvent;
+
+    if (link.closest('.hero')) {
+      return 'whatsapp_hero_click';
+    }
+
+    if (link.closest('.final')) {
+      return 'whatsapp_final_click';
+    }
+
+    if (link.closest('.contact-copy')) {
+      return 'whatsapp_contato_click';
+    }
+
+    if (link.classList.contains('social-link')) {
+      return 'whatsapp_footer_social_click';
+    }
+
+    const service = getService(link);
+    if (service && serviceWhatsappEvents[service]) {
+      return serviceWhatsappEvents[service];
+    }
+
+    const footerCol = link.closest('.footer-col');
+    if (footerCol && cleanText(link.textContent).includes('+55')) {
+      return 'whatsapp_footer_phone_click';
+    }
+
+    return 'whatsapp_other_click';
+  }
+
+  /* 1. WhatsApp: evento principal + nome específico da origem */
   document.addEventListener('click', function (event) {
-    var link = event.target.closest(
+    const link = event.target.closest(
       'a[href*="wa.me"], a[href*="whatsapp.com"], a[href*="api.whatsapp.com"]'
     );
 
     if (!link) return;
 
-    var service =
-      link.getAttribute('data-service') ||
-      link.closest('[data-service-detail]')?.getAttribute('data-service-detail') ||
-      'GERAL';
+    const service = getService(link) || 'GERAL';
+    const specificEvent = getWhatsappSpecificEvent(link);
 
-    var linkText = (link.innerText || link.getAttribute('aria-label') || 'WhatsApp')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    sendGA4Event('whatsapp_click', {
+    const params = {
       service: service,
-      link_text: linkText,
-      link_url: link.href,
-      source: 'site_criandoart'
-    });
+      click_location: specificEvent.replace(/^whatsapp_/, '').replace(/_click$/, ''),
+      link_text: cleanText(link.innerText || link.getAttribute('aria-label') || 'WhatsApp'),
+      link_url: link.href
+    };
+
+    sendGA4Event('whatsapp_click', Object.assign({
+      click_event_name: specificEvent
+    }, params));
+
+    sendGA4Event(specificEvent, params);
   }, true);
 
-  /* ---------------------------------------------------------
-     2. ENVIO DO FORMULÁRIO DE CONTATO
-     Não interfere no sendLeadToWhatsapp existente.
-     --------------------------------------------------------- */
-  var leadForm = document.getElementById('leadForm');
+  /* 2. Abertura dos serviços: geral + evento nominal */
+  document.querySelectorAll('[data-open-service]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const service = button.getAttribute('data-open-service') || 'NAO_INFORMADO';
+      const specificEvent = serviceOpenEvents[service] || 'service_other_open';
+
+      sendGA4Event('service_detail_open_ga4', {
+        service: service,
+        click_event_name: specificEvent
+      });
+
+      sendGA4Event(specificEvent, {
+        service: service
+      });
+    });
+  });
+
+  /* 3. Formulário */
+  const leadForm = document.getElementById('leadForm');
 
   if (leadForm) {
     leadForm.addEventListener('submit', function () {
-      var serviceField = document.getElementById('leadService');
+      const serviceField = document.getElementById('leadService');
 
       sendGA4Event('lead_form_submit', {
         service: serviceField ? serviceField.value : 'NAO_INFORMADO',
-        source: 'site_criandoart'
+        form_id: 'leadForm'
       });
     });
   }
 
-  /* ---------------------------------------------------------
-     3. INTERESSE EM SERVIÇOS
-     Registra abertura dos cards/modal.
-     --------------------------------------------------------- */
-  document.querySelectorAll('[data-open-service]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      sendGA4Event('service_detail_open_ga4', {
-        service: button.getAttribute('data-open-service') || 'NAO_INFORMADO',
-        source: 'site_criandoart'
-      });
+  /* 4. Navegação interna */
+  document.addEventListener('click', function (event) {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    const eventName = navEvents[href];
+
+    if (!eventName) return;
+
+    sendGA4Event(eventName, {
+      link_text: cleanText(link.textContent),
+      target_section: href.replace('#', '')
     });
-  });
+  }, true);
+
+  /* 5. Redes sociais */
+  document.addEventListener('click', function (event) {
+    const link = event.target.closest('.social-link');
+    if (!link) return;
+
+    const href = link.href || '';
+
+    if (href.includes('instagram.com')) {
+      sendGA4Event('instagram_click', {
+        link_text: cleanText(link.textContent),
+        link_url: href
+      });
+    }
+
+    if (href.includes('linkedin.com')) {
+      sendGA4Event('linkedin_click', {
+        link_text: cleanText(link.textContent),
+        link_url: href
+      });
+    }
+  }, true);
+
+  /* 6. CTA Conhecer soluções no Hero */
+  document.addEventListener('click', function (event) {
+    const link = event.target.closest('.hero .btn-secondary[href="#solucoes"]');
+    if (!link) return;
+
+    sendGA4Event('hero_solucoes_click', {
+      link_text: cleanText(link.textContent),
+      target_section: 'solucoes'
+    });
+  }, true);
 
 })();
 </script>
