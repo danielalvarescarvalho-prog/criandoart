@@ -14,6 +14,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-Z81JH6QBL5');
+  gtag('config', 'AW-18466222634');
 
   (function(){
     var loaded = false;
@@ -25,6 +26,7 @@
       s.src = 'https://www.googletagmanager.com/gtag/js?id=G-Z81JH6QBL5';
       document.head.appendChild(s);
     }
+    window.__loadGA4 = loadGA4;
     window.addEventListener('load', function(){
       if ('requestIdleCallback' in window) {
         requestIdleCallback(loadGA4, {timeout: 1800});
@@ -3060,6 +3062,44 @@ document.addEventListener('DOMContentLoaded',()=>{
     );
   }, true);
 
+})();
+</script>
+
+
+<script id="google-ads-whatsapp-conversion">
+(function () {
+  var conversionSent = false;
+
+  function isWhatsAppLink(a) {
+    if (!a || !a.href) return false;
+    try {
+      var u = new URL(a.href, location.href);
+      var h = u.hostname.toLowerCase();
+      return h === 'wa.me' ||
+             h === 'api.whatsapp.com' ||
+             h === 'web.whatsapp.com' ||
+             h.endsWith('.whatsapp.com');
+    } catch (e) {
+      return /(?:wa\.me|whatsapp\.com)/i.test(a.href);
+    }
+  }
+
+  document.addEventListener('click', function (event) {
+    var a = event.target.closest && event.target.closest('a[href]');
+    if (!isWhatsAppLink(a) || conversionSent) return;
+
+    conversionSent = true;
+
+    if (typeof window.__loadGA4 === 'function') window.__loadGA4();
+
+    if (typeof window.gtag === 'function') {
+      gtag('event', 'conversion', {
+        'send_to': 'AW-18466222634/wgM6CNS_noAdEKrksOVE',
+        'value': 1.0,
+        'currency': 'BRL'
+      });
+    }
+  }, {capture: true, passive: true});
 })();
 </script>
 
