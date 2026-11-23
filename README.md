@@ -1,15 +1,17 @@
-# CriandoArt, LP premium com fotografia corrigida
+# CriandoArt V49: LP Premium com marca e animações
 
-Este pacote inclui a foto da versão corrigida (sem lenço e sem pin C no paletó), já otimizada em `assets/daniel.webp` e integrada à seção principal responsiva.
+Pacote estático para GitHub/Vercel. Envie **todo o conteúdo desta pasta** para a raiz da branch `main`, incluindo a pasta `assets` (não somente `index.html`).
 
-## Para o GitHub
+## Revisões incluídas
+- Logo e símbolo C extraídos da marca mostrada na fotografia do escritório enviada pelo usuário (reprodução raster fotográfica, não o vetor original).
+- Ícone C no favicon.
+- Fotografia executiva corrigida em `assets/daniel.webp`.
+- Fundo premium e imagem social presentes localmente.
+- Animações de abertura, profundidade, cartões e botões, com modo de movimento reduzido.
+- GA4 `G-Z81JH6QBL5`, Ads `AW-18485678201`, cliques no WhatsApp e consentimento preservados.
+- Estrutura SEO e AEO, `robots.txt`, `sitemap.xml`.
 
-Envie **todos os arquivos e a pasta `assets`** para a raiz do repositório, mantendo a estrutura. O arquivo principal é `index.html`. A imagem precisa permanecer em `assets/daniel.webp`.
-
-## Rastreamento existente
-
-GA4: `G-Z81JH6QBL5` e Google Ads: `AW-18485678201`. Os cliques no WhatsApp são registrados como eventos no GA4, sujeitos ao consentimento. A conversão direta Google Ads ainda exige o rótulo da ação.
-
-## Avisos
-
-A publicação e testes no site público não foram executados. Avalie a política de privacidade e o banner de consentimento de acordo com os requisitos legais. O arquivo visual utilizado é a edição corrigida enviada nesta conversa.
+## Atenção
+A logo é baseada na marca fotografada na parede do escritório, não no arquivo vetorial oficial. Para fidelidade pixel a pixel, substitua `assets/logo-criandoart.png` pelo logo oficial em PNG transparente e mantenha o mesmo nome.
+O rótulo de conversão do Google Ads ainda precisa ser preenchido no código para conversões Ads específicas; o GA4 coleta o evento de clique.
+Faça uma validação real após o deploy; este pacote não representa teste concluído do site em produção.
