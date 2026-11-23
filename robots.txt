@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://criandoart.com.br/sitemap.xml
